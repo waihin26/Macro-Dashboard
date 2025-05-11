@@ -1,0 +1,60 @@
+/* ---------- GLOBAL TOKENS ------------------------------ */
+:root {
+    --brand-orange:  #ff572f;
+    --gray-light:    #e6e6e6;
+    --gray-mid:      #ccc;
+    --gray-dark:     #444;
+    --font-sans: 'Mulish', -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif;
+  }
+  
+  /* ---------- BASE --------------------------------------- */
+  html { font-size: 62.5%; }                 /* 1 rem = 10 px  */
+  body {
+    font-family: var(--font-sans);
+    color: var(--gray-dark);
+    background: #fff;
+    -webkit-font-smoothing: antialiased;
+  }
+  #MainMenu, footer {visibility: hidden;}    /* hide Streamlit chrome */
+  
+  /* ---------- HEADER & UNDERLINES ------------------------ */
+  h1 { font-size: 4rem; margin-bottom: 2.4rem; }
+  
+  /* “big” orange underline */
+  .big-underline {
+    height: 3px;
+    width: 100%;
+    background: var(--brand-orange);
+    margin: 2.4rem 0 3.6rem;
+  }
+  
+  /* tweak Streamlit Tabs → add our orange underline  */
+  div[data-baseweb="tab-list"] > button[aria-selected="true"]::after{
+    content:'';
+    display:block;
+    height:2px;
+    background:var(--brand-orange);
+    margin-top:2px;
+  }
+  
+  /* ---------- FLOATING E-MAIL FAB ------------------------ */
+  .fab-mail{
+    position:fixed; bottom:3rem; right:3rem;
+    width:56px; height:56px;
+    border-radius:50%; background:#004e90;          /* navy */
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,.2);
+    cursor:pointer;
+    z-index:9999;
+  }
+  .fab-mail:hover{ background:#0259a8; }
+  .fab-mail img{ width:24px; height:24px; filter:invert(1); }
+  
+  /* ---------- SCROLLBAR (WebKit) ------------------------- */
+  ::-webkit-scrollbar{ width:10px; }
+  ::-webkit-scrollbar-track{ background:#f5f5f5; }
+  ::-webkit-scrollbar-thumb{
+    background:#bdbdbd; border-radius:10px;
+  }
+  ::-webkit-scrollbar-thumb:hover{ background:#9e9e9e; }
+  
