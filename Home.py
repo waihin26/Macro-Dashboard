@@ -4,11 +4,10 @@ from pathlib import Path
 import streamlit.components.v1 as components
 import streamlit as st
 
-# ── 1️⃣ Page config & CSS ────────────────────────────────────────
+# Page config & CSS 
 st.set_page_config(
     page_title="Dual Mandate Monitor",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
 # load your existing theme.css + Mulish font
@@ -24,7 +23,7 @@ components.html(
     scrolling=False,
 )
 
-# ── 2️⃣ Header + gradient bar ────────────────────────────────────
+# Header + gradient bar 
 st.markdown(
     """
     <h1 style="text-align:center; margin:0">FED</h1>
