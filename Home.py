@@ -1,14 +1,14 @@
 import streamlit as st
 from pathlib import Path
+import datetime as dt
 import streamlit.components.v1 as components
-
 import plotly.graph_objects as go
 import plotly.express as px
 
 from data_fetcher.fred import (
     get_employment_growth,
     get_unemployment_rate,
-    _fred_series,   # only if you want recession shading
+    _fred_series,   # for recession shading
 )
 
 
@@ -33,7 +33,7 @@ st.markdown(
     <div style="
         height:4px;
         background:linear-gradient(90deg,#ff572f 0%,#ffed6f 100%);
-        margin:1.6rem 0 4rem 0;
+        margin:0.8rem 0 4rem 0;
     "></div>
     """,
     unsafe_allow_html=True,
@@ -52,21 +52,19 @@ with employment_tab:
     )
 
 with gen:
-    # 1) ──────────────────  data & rankings  ────────────────────────────
-    df_emp_full = get_employment_growth()
+    # getting data from backend servers
+    df_emp = get_employment_growth()
     df_unr      = get_unemployment_rate()
-
-    emp_rank_pct = (df_emp_full["Emp Growth"] < df_emp_full["Emp Growth"].iloc[-1]).mean() * 100
+    
+    # Computes what share of all historical observations are below the latest value as percentage. (Percentile Rank)
+    emp_rank_pct = (df_emp["Emp Growth"] < df_emp["Emp Growth"].iloc[-1]).mean() * 100
     unr_rank_pct = (df_unr["Unemployment Rate"] < df_unr["Unemployment Rate"].iloc[-1]).mean() * 100
-
-    df_emp = df_emp_full.loc["2023-01-01":]              # plot only 2023+
-
-    # 2) ──────────────────  two equal columns  ──────────────────────────
+    
     left, right = st.columns(2, gap="large")
-    FIG_HEIGHT  = 390                                     # pixels – tweak if needed
-    TOP_GAP_PX  = 18                                      # extra blank space above the figure
+    FIG_HEIGHT = 390
+    TOP_GAP_PX = 18
 
-    # ---------- LEFT : Employment Growth --------------------------------
+    # Employment Growth 
     with left:
         st.markdown(
             f"""
@@ -108,7 +106,7 @@ with gen:
         )
         st.plotly_chart(fig_emp, use_container_width=True)
 
-    # ---------- RIGHT : Unemployment Rate -------------------------------
+    # Unemployment Rate 
     with right:
         st.markdown(
             f"""
