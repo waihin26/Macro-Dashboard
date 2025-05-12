@@ -127,7 +127,6 @@ with gen:
         ),    
 
         yaxis = dict(range=y_range))
-
         st.plotly_chart(fig_emp, use_container_width=True)
 
     # Unemployment Rate 
@@ -143,6 +142,8 @@ with gen:
         )
         st.markdown(f"<div style='height:{TOP_GAP_PX}px'></div>", unsafe_allow_html=True)
 
+        # shifting the graph down a little to even it out
+        st.markdown(f"<div style='height:20px'></div>", unsafe_allow_html=True)
         fig_unr = px.line(
             df_unr, labels={"index": "", "value": "% Percentage points"},
             height=FIG_HEIGHT, color_discrete_sequence=["#1B65C0"]
@@ -153,10 +154,11 @@ with gen:
         fig_unr.add_hline(
             y=avg, line_dash="dash",
             annotation_text=f"Long-run avg {avg:.2f}%",
-            annotation_position="bottom right"
+            annotation_position="top left",
+            annotation_yshift = 150 
         )
 
-        # optional recession shading
+        # recession shading
         rec = _fred_series("USREC", name="USREC")
         for s, e in zip(rec[rec["USREC"].diff()==1].index,
                         rec[rec["USREC"].diff()==-1].index):
