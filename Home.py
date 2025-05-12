@@ -143,7 +143,7 @@ with gen:
         st.markdown(f"<div style='height:{TOP_GAP_PX}px'></div>", unsafe_allow_html=True)
 
         # shifting the graph down a little to even it out
-        st.markdown(f"<div style='height:20px'></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='height:px'></div>", unsafe_allow_html=True)
         fig_unr = px.line(
             df_unr, labels={"index": "", "value": "% Percentage points"},
             height=FIG_HEIGHT, color_discrete_sequence=["#1B65C0"]
@@ -175,6 +175,7 @@ with gen:
                 xanchor="left",   x=0,
                 font=dict(size=12)
             ),
+            legend_title_text=None 
         )
         st.plotly_chart(fig_unr, use_container_width=True)
 
