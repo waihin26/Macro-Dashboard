@@ -1,6 +1,7 @@
 import streamlit as st
 from pathlib import Path
 import datetime as dt
+import numpy as np
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import plotly.express as px
@@ -79,12 +80,28 @@ with gen:
         # blank gap between heading & chart
         st.markdown(f"<div style='height:{TOP_GAP_PX}px'></div>", unsafe_allow_html=True)
 
+        start_default = "2023-01-01"
+        end_default   = df_emp.index.max()
+
+        mask      = (df_emp.index >= start_default) & (df_emp.index <= end_default)
+        y_visible = np.concatenate([
+            df_emp.loc[mask, "Emp Growth"].values,
+            df_emp.loc[mask, "3M MA Emp Growth"].values
+        ])
+
+        y_pad   = 0.05 * (y_visible.max() - y_visible.min())   # 5 % padding
+        y_range = [y_visible.min() - y_pad, y_visible.max() + y_pad]
+
         fig_emp = go.Figure()
+
+        #Plots employment growth graph
         fig_emp.add_trace(go.Scatter(
             x=df_emp.index, y=df_emp["Emp Growth"],
             name="All Employees, Total Nonfarm",
             line=dict(color="#049CA4", width=2)
         ))
+
+        #Adds a 3 month Moving Average line
         fig_emp.add_trace(go.Scatter(
             x=df_emp.index, y=df_emp["3M MA Emp Growth"],
             name="3-Month MA",
@@ -92,18 +109,25 @@ with gen:
         ))
 
         fig_emp.update_layout(
-            height     = FIG_HEIGHT,
-            yaxis_title="Change (Thousands of persons)",
-            template   ="simple_white",
-            font       =dict(size=12),
-            margin     =dict(l=50, r=25, t=30, b=45),
-            legend     =dict(
+            height      = FIG_HEIGHT,
+            yaxis_title = "Change (Thousands of persons)",
+            template    = "simple_white",
+            font        = dict(size=12),
+            margin      = dict(l=50, r=25, t=30, b=45),
+            legend      = dict(
                 orientation="h",
-                yanchor="bottom", y=1.18,            # same for both charts
+                yanchor="bottom", y=1.18,
                 xanchor="left",   x=0,
                 font=dict(size=12)
-            ),
-        )
+        ),
+        xaxis = dict(
+            type       = "date",
+            range      = [start_default, end_default],
+            tickformat = "%b %Y"
+        ),    
+
+        yaxis = dict(range=y_range))
+
         st.plotly_chart(fig_emp, use_container_width=True)
 
     # Unemployment Rate 
