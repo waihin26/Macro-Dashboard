@@ -31,3 +31,21 @@ def get_unemployment_rate(start: str=None, end: str=None) -> pd.DataFrame:
     Returns a DataFrame with 'Unemployment Rate' (UNRATE).
     """
     return _fred_series("UNRATE", start, end, name="Unemployment Rate")
+
+
+def get_initial_claims(start: str=None, end: str=None) -> pd.DataFrame:
+    """
+    Returns a DataFrame with 'Unemployment Rate' (ICSA).
+    """
+    df_init = _fred_series("ICSA", start, end, name="Initial Claims")
+    df_init['4 Week Moving Average'] = df_init['Initial Claims'].rolling(4).mean()
+    return df_init
+
+
+def get_continued_claims(start: str=None, end: str=None) -> pd.DataFrame:
+    """
+    Returns a DataFrame with 'Continued Claims' (CCSA).
+    """
+    df_cont = _fred_series("CCSA", start, end, name="Continued Claims")
+    df_cont['4 Week Moving Average'] = df_cont['Continued Claims'].rolling(4).mean()
+    return df_cont
