@@ -9,6 +9,8 @@ from data_fetcher.fred import (
     get_unemployment_rate,
     get_initial_claims,
     get_continued_claims,
+    get_labour_market_conditions,
+    get_job_opening_per_person,
     _fred_series,
 )
 
@@ -21,7 +23,8 @@ TOP_GAP_PX = 18
 def _load():
     df_emp, df_unr = get_employment_growth(), get_unemployment_rate()
     df_init, df_cont = get_initial_claims(), get_continued_claims()
-    return df_emp, df_unr, df_init, df_cont
+    df_lmci, df_ratio = get_labour_market_conditions(), get_job_opening_per_person()
+    return df_emp, df_unr, df_init, df_cont, df_lmci, df_ratio
 
 
 
@@ -265,12 +268,94 @@ def _render_initial_vs_continued(df_init, df_cont):
         st.plotly_chart(fig_cont, use_container_width=True)
 
 
+def _render_lmci_vs_jobratio(df_lmci, df_ratio):
+    """KC-Fed LMCI and Job-Openings-per-Unemployed Ratio."""
+    left, right = st.columns(2, gap="large")
+
+    START_1995 = "1995-01-01"
+    START_2005 = "2005-01-01"
+    df_lmci  = df_lmci.loc[df_lmci.index  >= START_1995]          
+    df_ratio = df_ratio.loc[df_ratio.index >= START_2005]          
+    rec      = _fred_series("USREC", name="USREC").loc[START_1995:]
+
+    # ---------- percentile rank for the ratio (for the heading) ----------
+    pct_rank = (df_ratio["Jobs per Unemployed"]
+                < df_ratio["Jobs per Unemployed"].iloc[-1]).mean() * 100
+
+
+
+    # ----------------- LMCI (left) --------------------------------------
+    with left:
+        st.markdown(
+            "<div style='font-size:24px; font-weight:700; margin-left:85px;'>"
+            "Labor Market Conditions<br>KC FED"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig_lmci = go.Figure()
+        fig_lmci.add_trace(go.Scatter(
+            x=df_lmci.index, y=df_lmci["LMCI"],
+            name="LMCI", line=dict(color="#1f77b4", width=2)
+        ))
+        fig_lmci.add_hline(y=0, line_dash="dash")
+
+        # recession shading
+        for s, e in zip(rec[rec["USREC"].diff() == 1].index,
+                        rec[rec["USREC"].diff() == -1].index):
+            fig_lmci.add_vrect(x0=s, x1=e, fillcolor="lightgrey",
+                                opacity=.30, line_width=0)
+
+        fig_lmci.update_layout(
+            height=FIG_HEIGHT, template="simple_white",
+            margin=dict(l=50, r=25, t=30, b=45),
+            yaxis_title="Loose  ←  Index  →  Tight",
+            font=dict(size=12),
+            showlegend=False,
+            xaxis=dict(type="date",                                
+                       range=[START_1995, df_lmci.index.max()])    
+        )
+        st.plotly_chart(fig_lmci, use_container_width=True)
+
+    # ----------------- Job-openings ratio (right) -----------------------
+    with right:
+        st.markdown(
+            f"<div style='font-size:24px; font-weight:700; margin-left:85px;'>"
+            f"Job Opening per Unemployed<br>Ranking: {pct_rank:.2f}%"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig_ratio = go.Figure()
+        fig_ratio.add_trace(go.Scatter(
+            x=df_ratio.index, y=df_ratio["Jobs per Unemployed"],
+            name="Jobs / Unemployed", line=dict(color="#049CA4", width=2)
+        ))
+        fig_ratio.add_hline(y=1, line_dash="dash")
+
+        for s, e in zip(rec[rec["USREC"].diff() == 1].index,
+                        rec[rec["USREC"].diff() == -1].index):
+            fig_ratio.add_vrect(x0=s, x1=e, fillcolor="lightgrey",
+                                opacity=.30, line_width=0)
+
+        fig_ratio.update_layout(
+            height=FIG_HEIGHT, template="simple_white",
+            margin=dict(l=50, r=25, t=30, b=45),
+            yaxis_title="Ratio",
+            font=dict(size=12),
+            showlegend=False,
+             xaxis=dict(type="date",                               
+                       range=[START_2005, df_ratio.index.max()])    
+        )
+        st.plotly_chart(fig_ratio, use_container_width=True)
+
+
 
 
 # ── public entry-point ─────────────────────────────────────────────────
 def render():
     """Top-level call from Home.py – builds the sub-tabs."""
-    df_emp, df_unr, df_init, df_cont = _load()
+    df_emp, df_unr, df_init, df_cont, df_lmci, df_ratio = _load()
 
     gen_tab, nfp_tab, wages_tab, alt_tab = st.tabs(
         ["General", "NFP", "Wages", "Alternatives"]
@@ -279,6 +364,9 @@ def render():
     with gen_tab:
         _render_general(df_emp, df_unr)
         _render_initial_vs_continued(df_init, df_cont)
+        _render_lmci_vs_jobratio(df_lmci, df_ratio)
+
+
 
     with nfp_tab:
         st.info("Coming soon.")
