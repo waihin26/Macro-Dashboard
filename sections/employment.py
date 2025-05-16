@@ -11,6 +11,8 @@ from data_fetcher.fred import (
     get_continued_claims,
     get_labour_market_conditions,
     get_job_opening_per_person,
+    get_labor_supply_demand,
+    get_labor_balance,
     _fred_series,
 )
 
@@ -24,7 +26,8 @@ def _load():
     df_emp, df_unr = get_employment_growth(), get_unemployment_rate()
     df_init, df_cont = get_initial_claims(), get_continued_claims()
     df_lmci, df_ratio = get_labour_market_conditions(), get_job_opening_per_person()
-    return df_emp, df_unr, df_init, df_cont, df_lmci, df_ratio
+    df_supdem, df_balance = get_labor_supply_demand(), get_labor_balance()
+    return df_emp, df_unr, df_init, df_cont, df_lmci, df_ratio, df_supdem, df_balance
 
 
 
@@ -349,13 +352,116 @@ def _render_lmci_vs_jobratio(df_lmci, df_ratio):
         )
         st.plotly_chart(fig_ratio, use_container_width=True)
 
+def _render_supply_demand(df_supdem, df_balance):
+    """Labor Supply & Demand (level) + Balance (excess jobs)."""
+    START = "2001-01-01" 
+    df_supdem  = df_supdem.loc[START:]
+    df_balance = df_balance.loc[START:]
+    rec        = _fred_series("USREC", name="USREC").loc[START:]
+
+    left, right = st.columns(2, gap="large")
+
+    # --------------- Supply vs Demand (left) ---------------------------
+    with left:
+        st.markdown(
+            "<div style='font-size:26px; font-weight:700; margin-left:85px;'>"
+            "Labor Supply and Demand"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig_sd = go.Figure()
+        fig_sd.add_trace(go.Scatter(
+            x=df_supdem.index,
+            y=df_supdem["Labor Demand (Openings + Employment)"],
+            name="Labor Demand (Openings + Employment)",
+            line=dict(color="#049CA4", width=2)
+        ))
+        fig_sd.add_trace(go.Scatter(
+            x=df_supdem.index,
+            y=df_supdem["Labor Supply (Civilian Labor Force)"],
+            name="Supply (Civilian Labor Force)",
+            line=dict(color="#0D1B2A", width=2)
+        ))
+
+        for s, e in zip(rec[rec["USREC"].diff() == 1].index,
+                        rec[rec["USREC"].diff() == -1].index):
+            fig_sd.add_vrect(x0=s, x1=e, fillcolor="lightgrey", line_width=0)
+            
+        fig_sd.update_layout(
+            height=FIG_HEIGHT, template="simple_white",
+            margin=dict(l=50, r=25, t=30, b=45),
+            yaxis_title="Millions",
+            font=dict(size=12),
+            legend=dict(
+            orientation="h",
+            x=0, xanchor="left",
+            y=1.02, yanchor="bottom"         
+           ),
+                yaxis=dict(
+                    title="Millions",
+                    tickmode="linear",   
+                    dtick=5              
+                ),
+            xaxis=dict(type="date",
+                       range=[START, df_supdem.index.max()]),
+        )
+        st.plotly_chart(fig_sd, use_container_width=True)
+
+    # --------------- Balance (right) -----------------------------------
+    with right:
+        st.markdown(
+            "<div style='font-size:26px; font-weight:700; "
+            "margin-left:85px; line-height:1.1;'>"
+            "The Balance<br>The lower the tighter"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig_bal = go.Figure()
+        fig_bal.add_trace(go.Scatter(
+            x=df_balance.index, y=df_balance["Excess Jobs"],
+            line=dict(color="#67B7D1", width=2),
+            name="Excess Jobs"
+        ))
+
+        for s, e in zip(rec[rec["USREC"].diff() == 1].index,
+                        rec[rec["USREC"].diff() == -1].index):
+            fig_bal.add_vrect(x0=s, x1=e, fillcolor="lightgrey",
+                              line_width=0, layer="below")
+ 
+        fig_bal.update_yaxes(
+            range=[-5, df_balance["Excess Jobs"].max()],
+            tickmode="linear",
+            dtick=5
+        )
+
+        fig_bal.add_shape(
+            type="line",
+            xref="paper", x0=0, x1=1,    # span the entire x-axis
+            yref="y",     y0=0, y1=0,    # y = 0
+            line=dict(color="black", dash="dash", width=1),
+            layer="above"
+        )   
+
+        fig_bal.update_layout(
+            height=FIG_HEIGHT, template="simple_white",
+            margin=dict(l=50, r=25, t=30, b=45),
+            yaxis_title="Excess Jobs (in millions)", 
+            font=dict(size=12),
+            showlegend=False,
+            xaxis=dict(type="date",
+                       range=[START, df_balance.index.max()]),
+        )
+        st.plotly_chart(fig_bal, use_container_width=True)
+
 
 
 
 # ── public entry-point ─────────────────────────────────────────────────
 def render():
     """Top-level call from Home.py – builds the sub-tabs."""
-    df_emp, df_unr, df_init, df_cont, df_lmci, df_ratio = _load()
+    df_emp, df_unr, df_init, df_cont, df_lmci, df_ratio, df_supdem, df_balance = _load()
 
     gen_tab, nfp_tab, wages_tab, alt_tab = st.tabs(
         ["General", "NFP", "Wages", "Alternatives"]
@@ -365,6 +471,7 @@ def render():
         _render_general(df_emp, df_unr)
         _render_initial_vs_continued(df_init, df_cont)
         _render_lmci_vs_jobratio(df_lmci, df_ratio)
+        _render_supply_demand(df_supdem, df_balance)
 
 
 

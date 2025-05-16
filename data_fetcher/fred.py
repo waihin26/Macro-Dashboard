@@ -64,3 +64,37 @@ def get_job_opening_per_person(start: str=None, end: str=None) -> pd.DataFrame:
     df = df_jolts.join(df_unemp, how="inner")
     df["Jobs per Unemployed"] = df["Job Openings"] / df["Unemployed"]
     return df[["Jobs per Unemployed"]]
+
+#  Labor Supply  vs  Labor Demand  (+ balance)
+def get_labor_supply_demand(start: str = None, end:   str = None) -> pd.DataFrame:
+    """
+    Returns a DataFrame with:
+      - 'Labor Demand (Openings + Employment)'  — JTSJOL + PAYEMS
+      - 'Labor Supply (Civilian Labor Force)'   — CLF16OV
+    All series converted to **millions of persons** (÷1_000).
+    """
+    openings   = _fred_series("JTSJOL",   start, end, name="Job Openings")
+    employment = _fred_series("PAYEMS",   start, end, name="Employment")
+    labor_sup  = _fred_series("CLF16OV",  start, end, name="Labor Supply")
+
+    data = openings.join(employment, how="inner")
+    data["Labor Demand (Openings + Employment)"] = (data["Job Openings"] +
+                                                    data["Employment"]) / 1_000
+    data["Labor Supply (Civilian Labor Force)"]  = labor_sup["Labor Supply"] / 1_000
+    return data[
+        ["Labor Demand (Openings + Employment)",
+         "Labor Supply (Civilian Labor Force)"]
+    ]
+
+
+def get_labor_balance(start: str = None, end:   str = None) -> pd.DataFrame:
+    """
+    Excess (Jobs-demand minus Supply) in millions.
+    Positive ⇒ demand exceeds supply (= tight market).
+    """
+    df = get_labor_supply_demand(start, end)
+    df["Excess Jobs"] = (
+        df["Labor Supply (Civilian Labor Force)"] -
+        df["Labor Demand (Openings + Employment)"]
+        )
+    return df[["Excess Jobs"]]
