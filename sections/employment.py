@@ -1,8 +1,8 @@
-# sections/employment.py  ────────────────────────────────────────────────
 import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
+from sections.nfp import render_nfp
 
 from data_fetcher.fred import (
     get_employment_growth,
@@ -476,7 +476,7 @@ def render():
 
 
     with nfp_tab:
-        st.info("Coming soon.")
+        render_nfp()
 
     with wages_tab:
         st.info("Coming soon.")
