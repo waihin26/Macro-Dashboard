@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
 from sections.nfp import render_nfp, render_nfp_subsector
-from sections.wages import render_wages_vs_cpi
+from sections.wages import render_wages_vs_cpi, render_wages_subsector
 
 from data_fetcher.fred import (
     get_employment_growth,
@@ -482,6 +482,7 @@ def render():
 
     with wages_tab:
         render_wages_vs_cpi()
+        render_wages_subsector()
 
     with alt_tab:
         st.info("Coming soon.")

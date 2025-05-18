@@ -9,14 +9,21 @@ ANCHOR  = date(2020, 1, 1)
 RECESS  = "USREC"                
 
 SERIES = {
-    # Average hourly earnings (SA, $/hour)
     "Total Private"             : "CES0500000003",
     "Goods-Producing"           : "CES0600000003",
     "Private Service-Providing" : "CES0800000003",
-
-    # Headline CPI (index 1982-84 = 100)
     "CPI"                       : "CPIAUCSL",
+    "TTU"                       : "CES4000000003",   
+    "Information"               : "CES5000000003",  
+    "Financial"                 : "CES5500000003",   
+    "Business"                  : "CES6000000003",   
+    "Private Edu. & Health"     : "CES6500000003",   
+    "Leisure & Hosp."           : "CES7000000003",   
+    "Mining and Logging"        : "CES1000000003",  
+    "Construction"              : "CES2000000003",   
+    "Manufacturing"             : "CES3000000003",   
 }
+
 
 @st.cache_data(show_spinner=False)
 def _panel():
@@ -65,7 +72,7 @@ def render_wages_vs_cpi() -> None:
 
     col1, col2 = st.columns(2, gap="large")
 
-    # ---------- (1) Private wages vs CPI --------------------------------
+    # Private wages vs CPI 
     with col1:
         st.markdown(
             "<div style='font-size:26px;font-weight:700;margin-left:85px;'>"
@@ -115,3 +122,69 @@ def render_wages_vs_cpi() -> None:
             legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01),
         )
         st.plotly_chart(fig2, use_container_width=True)
+
+
+# Sub-sector wage lines vs CPI  
+def render_wages_subsector() -> None:
+    df, recess, x_rng = _prepared()
+
+    row1, row2 = st.columns(2, gap="large")
+
+    # ---------- (a) Services detail --------------------------------------
+    with row1:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:85px;'>"
+            "Services by Sub-Sector</div>",
+            unsafe_allow_html=True,
+        )
+
+        serv_order  = ["TTU", "Information", "Financial",
+                       "Business", "Private Edu. & Health",
+                       "Leisure & Hosp.", "CPI"]
+        serv_colors = ["#0E84C8", "#6C8EBF", "#2A7F9C",
+                       "#002B45", "#FABB2A", "#FDBE4C", "#F28E2B"]
+
+        fig = go.Figure()
+        for lbl, col in zip(serv_order, serv_colors):
+            fig.add_scatter(x=df.index, y=df[lbl],
+                            name=lbl, mode="lines",
+                            line=dict(width=3, color=col))
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25),
+            xaxis=dict(range=x_rng),
+            yaxis=dict(title="Percent", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom",
+                        y=1.02, x=0.01, font=dict(size=11)),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ---------- (b) Goods detail -----------------------------------------
+    with row2:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:85px;'>"
+            "Goods&nbsp;By&nbsp;Sub-Sector</div>",
+            unsafe_allow_html=True,
+        )
+
+        goods_order  = ["Manufacturing", "Construction",
+                        "Mining and Logging", "CPI"]
+        goods_colors = ["#9EC9E2", "#18A5C2", "#F4B400", "#F28E2B"]
+
+        fig = go.Figure()
+        for lbl, col in zip(goods_order, goods_colors):
+            fig.add_scatter(x=df.index, y=df[lbl],
+                            name=lbl, mode="lines",
+                            line=dict(width=3, color=col))
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25),
+            xaxis=dict(range=x_rng),
+            yaxis=dict(title="Percent", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom",
+                        y=1.02, x=0.01, font=dict(size=11)),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
