@@ -24,12 +24,12 @@ st.markdown("""
 st.markdown("# The Dual Mandate Monitor")
 
 # ── Tabs & Sections ─────────────────────────────────────
-from sections import employment, inflation  # noqa: E402
+from sections import employment, inflation  
 
 employment_tab, inflation_tab = st.tabs(["Employment", "Inflation"])
 
 with employment_tab:
-    employment.render()        # <── one-liner!
+    employment.render()       
 
 with inflation_tab:
     inflation.render()         # <── stub for future work
