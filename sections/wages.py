@@ -21,7 +21,9 @@ SERIES = {
     "Leisure & Hosp."           : "CES7000000003",   
     "Mining and Logging"        : "CES1000000003",  
     "Construction"              : "CES2000000003",   
-    "Manufacturing"             : "CES3000000003",   
+    "Manufacturing"             : "CES3000000003",
+    "Non-supervisory"           : "AHETPI",   
+    "ECI Wages"                 : "ECIWAG", 
 }
 
 
@@ -65,8 +67,6 @@ def _add_recessions(fig, periods):
         fig.add_vrect(x0=s, x1=e, fillcolor="grey",
                       opacity=0.25, line_width=0, layer="below")
         
-
-
 def render_wages_vs_cpi() -> None:
     df, recess, x_rng = _prepared()
 
@@ -185,6 +185,72 @@ def render_wages_subsector() -> None:
             yaxis=dict(title="Percent", tickformat=".1f", ticksuffix="%"),
             legend=dict(orientation="h", yanchor="bottom",
                         y=1.02, x=0.01, font=dict(size=11)),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
+# Non-supervisory AHE vs CPI  +  Employment-Cost-Index YoY           #
+def render_wage_benchmarks() -> None:
+    df_pct, recess, x_rng = _prepared()         
+    base     = _panel()                         
+
+    # ---- build ECI YoY (quarterly) ------------------------------
+    eci_yoy = base["ECI Wages"].pct_change(4) * 100   # 4 quarters ⇒ YoY
+    eci_yoy = eci_yoy.dropna()
+
+    col1, col2 = st.columns(2, gap="large")
+
+    # ---------- Non-supervisory earnings vs CPI ---------------
+    with col1:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:85px;'>"
+            "Non-Supervisory Wages&nbsp;Vs&nbsp;CPI</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=df_pct.index, y=df_pct["Non-supervisory"],
+            name="Non-supervisory", mode="lines",
+            line=dict(width=3, color="#18A5C2")
+        )
+        fig.add_scatter(
+            x=df_pct.index, y=df_pct["CPI"],
+            name="CPI", mode="lines",
+            line=dict(width=3, color="#0D1F2D")
+        )
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25),
+            xaxis=dict(range=x_rng),
+            yaxis=dict(title="Percent", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ---------- Employment Cost Index YoY ---------------------
+    with col2:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:85px;'>"
+            "Employment Cost Index – Wages (YoY)</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=eci_yoy.index, y=eci_yoy,
+            name="ECI Wages YoY", mode="lines",
+            line=dict(width=3, color="#F4B400")
+        )
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25),
+            xaxis=dict(range=x_rng),
+            yaxis=dict(title="Percent", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
         )
         st.plotly_chart(fig, use_container_width=True)
 

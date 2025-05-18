@@ -125,9 +125,7 @@ def render_nfp() -> None:
 
     st.caption("Source: BLS CES & NBER recession dates via FRED. Figures in millions.")
 
-# -------------------------------------------------------------------------
-# 4) Sub-sector charts  (call this separately)
-# -------------------------------------------------------------------------
+# Sub-sector charts  
 def render_nfp_subsector() -> None:
    
     df, recess, x_rng = _prepared()
