@@ -476,7 +476,6 @@ def render():
         _render_supply_demand(df_supdem, df_balance)
 
 
-
     with nfp_tab:
         render_nfp()
         render_nfp_subsector()

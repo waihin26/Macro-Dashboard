@@ -1,7 +1,7 @@
 import streamlit as st
 from pathlib import Path
 import streamlit.components.v1 as components
-from sections import employment
+from sections import employment, inflation
 
 # ── Page-wide setup ─────────────────────────────────────
 st.set_page_config(page_title="Dual Mandate Monitor", layout="wide")
@@ -32,4 +32,4 @@ with employment_tab:
     employment.render()       
 
 with inflation_tab:
-    inflation.render()         # <── stub for future work
+    inflation.render()        
