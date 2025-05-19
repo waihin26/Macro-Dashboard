@@ -12,7 +12,7 @@ SERIES = {
     # headline splits
     "Total Private"             : "USPRIV",
     "Government"                : "USGOVT",
-    "Private Service-Providing" : "CES0800000001",   # this one *is* short enough
+    "Private Service-Providing" : "CES0800000001",   
     "Goods-Producing"           : "USGOOD",
     "Federal"                   : "CES9091000001",
     "State Government"          : "CES9092000001",

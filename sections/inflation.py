@@ -1,4 +1,5 @@
 import streamlit as st
+from sections.overview import render_cpi_overview
 
 
 def render():
@@ -7,7 +8,7 @@ def render():
     )
 
     with overview_tab:
-        st.info("Overview content goes here.")
+        render_cpi_overview()
 
     with cpi_tab:
         st.info("Overview content goes here.")         
