@@ -33,6 +33,14 @@ SERIES_INFL_EXP = {
     "5Y5Y Forwards": "T5YIFR",  # 5-Year, 5-Year Forward Inflation Expectation
 }
 
+SERIES_PROB_YR_AHEAD = {
+    "Prob > 2.5% Next Yr" : "STLPPM",   
+}
+
+SERIES_UMICH_YR_AHEAD = {
+    "UMich 1-Yr Exp"      : "MICH",     
+}
+
 # Fed’s Average-Inflation-Target (AIT) band, expressed in %-pts
 AIT_BAND_LOW  = 2.0
 AIT_BAND_HIGH = 2.5
@@ -111,6 +119,20 @@ def _panel_infl_exp() -> pd.DataFrame:
         [_fred_series(code, name=lbl) for lbl, code in SERIES_INFL_EXP.items()],
         axis=1
     ).dropna()
+
+@st.cache_data(show_spinner=False)
+def _panel_prob_next_year() -> pd.DataFrame:
+    """Return probability series converted to percent (0–100)."""
+    df = _fred_series(SERIES_PROB_YR_AHEAD["Prob > 2.5% Next Yr"],
+                      name="Prob > 2.5% Next Yr")
+    return (df * 100.0).dropna()              # decimal → percent
+
+
+@st.cache_data(show_spinner=False)
+def _panel_umich_next_year() -> pd.DataFrame:
+    """Return UMich median 1-year inflation expectation (%)."""
+    return _fred_series(SERIES_UMICH_YR_AHEAD["UMich 1-Yr Exp"],
+                        name="UMich 1-Yr Exp").dropna()
 
 
 def _recession_periods(rec: pd.Series):
@@ -393,5 +415,70 @@ def render_alt_core_and_expectations() -> None:
                 range=[1.9, 2.7]        # matches your screenshot
             ),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def render_year_ahead_expectations() -> None:
+    """
+    (L) Probability inflation > 2.5 % in next 12 months (STLPPM)
+    (R) University of Michigan 1-year inflation expectations (MICH)
+    """
+    df_prob  = _panel_prob_next_year()
+    df_umich = _panel_umich_next_year()
+
+    col1, col2 = st.columns(2, gap="large")
+
+    # ---------------- (1) probability panel ------------------------------
+    with col1:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "Year Ahead Expectations</div>",
+            unsafe_allow_html=True,
+        )
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=df_prob.index, y=df_prob["Prob > 2.5% Next Yr"],
+            mode="lines", name="",  # single series → no legend
+            line=dict(width=3, color="#86C7DE")
+        )
+        fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="#000")
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25, r=10),
+            yaxis=dict(
+                title="Chances of Inflation Exceeding 2.5% in a Year",
+                tickformat=".0f", ticksuffix="%", range=[0, 100]
+            ),
+            showlegend=False
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ---------------- (2) UMich survey panel -----------------------------
+    with col2:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "Year Ahead Expectations (UMICH Survey) </div>",
+            unsafe_allow_html=True,
+        )
+
+        # zoom to ≈ last 24 months
+        start_zoom = df_umich.index.max() - pd.DateOffset(months=24)
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=df_umich.index, y=df_umich["UMich 1-Yr Exp"],
+            mode="lines", name="",
+            line=dict(width=3, color="#86C7DE")
+        )
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25, r=10),
+            xaxis=dict(range=[start_zoom, df_umich.index.max()]),
+            yaxis=dict(
+                title="Expected Rate", tickformat=".1f", ticksuffix="%",
+                range=[2.5, 5.5]   # matches screenshot
+            ),
+            showlegend=False
         )
         st.plotly_chart(fig, use_container_width=True)

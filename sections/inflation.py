@@ -1,5 +1,5 @@
 import streamlit as st
-from sections.overview import render_cpi_overview, render_ppi_overview, render_alt_core_and_expectations
+from sections.overview import render_cpi_overview, render_ppi_overview, render_alt_core_and_expectations, render_year_ahead_expectations
 
 
 def render():
@@ -11,6 +11,7 @@ def render():
         render_cpi_overview()
         render_ppi_overview()
         render_alt_core_and_expectations()
+        render_year_ahead_expectations()
 
     with cpi_tab:
         st.info("Overview content goes here.")         
