@@ -16,6 +16,23 @@ SERIES_CPI = {
     "Core CPI"     : "CPILFESL",   # CPI ex-Food & Energy (SA)
 }
 
+       
+SERIES_PPI = {
+    "Headline PPI": "PPIACO",   # All Commodities PPI (not seasonally adjusted)                             
+    "Core PPI"    : "PPICOR",   # Final Demand: Less Foods & Energy (not seasonally adjusted)          
+}
+
+SERIES_ALT_CORE = {
+        "Trimmed Mean PCE"     : "PCETRIM12M159SFRBDAL",       
+        "16% Trimmed-Mean CPI" : "TRMMEANCPIM158SFRBCLE",     
+        "Median CPI"           : "MEDCPIM158SFRBCLE",          
+}
+
+SERIES_INFL_EXP = {
+    "5Y Breakeven" : "T5YIE",   # 5-Year Breakeven Inflation Rate
+    "5Y5Y Forwards": "T5YIFR",  # 5-Year, 5-Year Forward Inflation Expectation
+}
+
 # Fed’s Average-Inflation-Target (AIT) band, expressed in %-pts
 AIT_BAND_LOW  = 2.0
 AIT_BAND_HIGH = 2.5
@@ -49,6 +66,51 @@ def _panel_cpi() -> pd.DataFrame:
     rec = _fred_series(RECESS, name="USREC")
 
     return pd.concat([yoy, ann3, rec], axis=1).dropna()
+
+
+@st.cache_data(show_spinner=False)
+def _panel_ppi() -> pd.DataFrame:
+    """
+    Build a DataFrame with:
+      • YoY % change in headline/core PPI
+      • 3-month rolling annualised % change
+      • NBER recession flag
+    """
+    df_idx = pd.concat(
+        [_fred_series(code, name=lbl) for lbl, code in SERIES_PPI.items()],
+        axis=1
+    ).dropna()
+
+    # YoY %
+    yoy = df_idx.pct_change(12) * 100
+    yoy.columns = [f"{c} YoY" for c in df_idx.columns]
+
+    # 3-month rolling annualised %
+    ann3 = (df_idx / df_idx.shift(3)) ** 4 - 1
+    ann3 = ann3 * 100
+    ann3.columns = [f"{c} 3M" for c in df_idx.columns]
+
+    rec = _fred_series(RECESS, name="USREC")
+
+    return pd.concat([yoy, ann3, rec], axis=1).dropna()
+
+
+@st.cache_data(show_spinner=False)
+def _panel_alt_core() -> pd.DataFrame:
+    df = pd.concat(
+        [_fred_series(code, name=lbl) for lbl, code in SERIES_ALT_CORE.items()],
+        axis=1
+    ).dropna()
+    rec = _fred_series(RECESS, name="USREC")
+    return df.join(rec, how="inner").dropna()
+
+
+@st.cache_data(show_spinner=False)
+def _panel_infl_exp() -> pd.DataFrame:
+    return pd.concat(
+        [_fred_series(code, name=lbl) for lbl, code in SERIES_INFL_EXP.items()],
+        axis=1
+    ).dropna()
 
 
 def _recession_periods(rec: pd.Series):
@@ -152,6 +214,183 @@ def render_cpi_overview() -> None:
             yaxis=dict(
                 title="3-Month Rolling Annualised CPI",
                 tickformat=".1f", ticksuffix="%", range=[0, 5]
+            ),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+@st.cache_data(show_spinner=False)
+def _panel_pce() -> pd.DataFrame:
+    """
+    Same construction as _panel_cpi(), but for PCE:
+        • YoY % change
+        • 3-month rolling annualised % change
+        • US recession indicator
+    """
+    df_idx = pd.concat(
+        [_fred_series(code, name=lbl) for lbl, code in SERIES_PCE.items()],
+        axis=1
+    ).dropna()
+
+    yoy = df_idx.pct_change(12) * 100
+    yoy.columns = [f"{c} YoY" for c in df_idx.columns]
+
+    ann3 = (df_idx / df_idx.shift(3)) ** 4 - 1
+    ann3 = ann3 * 100
+    ann3.columns = [f"{c} 3M" for c in df_idx.columns]
+
+    rec = _fred_series(RECESS, name="USREC")
+
+    return pd.concat([yoy, ann3, rec], axis=1).dropna()
+
+
+def render_ppi_overview() -> None:
+    """Render PPI YoY trend and 3-month annualised change (side-by-side)."""
+    df      = _panel_ppi()
+    recess  = _recession_periods(df["USREC"])
+
+    df_yoy = df[["Core PPI YoY", "Headline PPI YoY"]]
+    df_3m  = df[["Core PPI 3M",  "Headline PPI 3M"]]
+
+    col1, col2 = st.columns(2, gap="large")
+
+    # 1) PPI YoY trend ----------------------------------------------------
+    with col1:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "US PPI Trend&nbsp;–&nbsp;YoY</div>",
+            unsafe_allow_html=True,
+        )
+        fig = go.Figure()
+        fig.add_scatter(
+            x=df_yoy.index, y=df_yoy["Core PPI YoY"],
+            mode="lines", name="Core",
+            line=dict(width=3, color="#18A5C2")
+        )
+        fig.add_scatter(
+            x=df_yoy.index, y=df_yoy["Headline PPI YoY"],
+            mode="lines", name="Headline",
+            line=dict(width=3, color="#0D1F2D")
+        )
+        _add_fed_ait_band(fig)
+        fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="#000")
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25),
+            yaxis=dict(title="YoY", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 2) Short-term (3-month annualised) change --------------------------
+    with col2:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "US PPI Short&nbsp;Term&nbsp;Change</div>",
+            unsafe_allow_html=True,
+        )
+
+        # show last 24 months
+        start_zoom = df_3m.index.max() - pd.DateOffset(months=24)
+
+        fig = go.Figure()
+        fig.add_scatter(
+            x=df_3m.index, y=df_3m["Core PPI 3M"],
+            mode="lines", name="Core",
+            line=dict(width=3, color="#18A5C2")
+        )
+        fig.add_scatter(
+            x=df_3m.index, y=df_3m["Headline PPI 3M"],
+            mode="lines", name="Headline",
+            line=dict(width=3, color="#0D1F2D")
+        )
+        _add_fed_ait_band(fig)
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25),
+            xaxis=dict(range=[start_zoom, df_3m.index.max()]),
+            yaxis=dict(
+                title="3-Month Rolling Annualised PPI",
+                tickformat=".1f", ticksuffix="%",
+                range=[0, 7]
+            ),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
+def render_alt_core_and_expectations() -> None:
+    """
+    (L) Alternative core CPI/PCE measures (YoY)
+    (R) Market inflation expectations (5Y breakeven, 5Y5Y forward)
+    """
+    df_core = _panel_alt_core()
+    df_exp  = _panel_infl_exp()
+
+    # --- layout ---------------------------------------------------------
+    col1, col2 = st.columns(2, gap="large")
+
+    # -------- Alternative Core Measures -----------------------------
+    with col1:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "Alternative Core Measures&nbsp;–&nbsp;YoY</div>",
+            unsafe_allow_html=True,
+        )
+
+        colours = ["#86C7DE", "#0794C6", "#F4B400"]  # lt-blue, blue, orange
+        fig = go.Figure()
+        for (lbl, col) in zip(SERIES_ALT_CORE.keys(), colours):
+            fig.add_scatter(
+                x=df_core.index, y=df_core[lbl],
+                mode="lines", name=lbl,
+                line=dict(width=3, color=col)
+            )
+
+        _add_fed_ait_band(fig)
+        fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="#000")
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25, r=10),
+            yaxis=dict(title="YoY", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # -------- (2) Market Inflation Expectations -------------------------
+    with col2:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "Market Inflation Expectations</div>",
+            unsafe_allow_html=True,
+        )
+
+        # focus on the past two years for clarity
+        start_zoom = df_exp.index.max() - pd.DateOffset(months=24)
+
+        colours = ["#18A5C2", "#0D1F2D"]  # teal-ish & dark navy
+        fig = go.Figure()
+        for (lbl, col) in zip(SERIES_INFL_EXP.keys(), colours):
+            fig.add_scatter(
+                x=df_exp.index, y=df_exp[lbl],
+                mode="lines", name=lbl,
+                line=dict(width=3, color=col)
+            )
+
+        _add_fed_ait_band(fig)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25, r=10),
+            xaxis=dict(range=[start_zoom, df_exp.index.max()]),
+            yaxis=dict(
+                title="Rate %", tickformat=".2f", ticksuffix="%",
+                range=[1.9, 2.7]        # matches your screenshot
             ),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
         )
