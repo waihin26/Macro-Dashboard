@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import date
 from data_fetcher.fred import _fred_series 
-import numpy as np
 
 
 FIG_H   = 390
