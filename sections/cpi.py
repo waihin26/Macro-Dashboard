@@ -2,7 +2,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from data_fetcher.fred import _fred_series          
+from data_fetcher.fred import _fred_series      
+import numpy as np    
 
 FIG_H   = 390
 RECESS  = "USREC"
@@ -17,6 +18,12 @@ SERIES_CPI_COMP = {
 SERIES_CPI_HOUSING = {
     "Rent of Primary Residence" : "CUSR0000SEHA",   # SA
     "OER"                       : "CUSR0000SEHC",   # Owners’ Equivalent Rent
+}
+
+SERIES_CPI_SERVICES = {
+    "Services"                       : "CUSR0000SAS",      # All services
+    "Services less Energy Services"  : "CUSR0000SASLE",    # :contentReference[oaicite:0]{index=0}
+    "Services less Rent of Shelter"  : "CUSR0000SASL2RS",  # :contentReference[oaicite:1]{index=1}
 }
 
 @st.cache_data(show_spinner=False)
@@ -69,6 +76,26 @@ def _panel_components() -> pd.DataFrame:
     rec = _fred_series(RECESS, name="USREC")
 
     return pd.concat([yoy, ann3, rec], axis=1).dropna()
+
+@st.cache_data(show_spinner=False)
+def _panel_services() -> pd.DataFrame:
+    """YoY %, 3-month annualised %, plus USREC for the three services series."""
+    idx = pd.concat(
+        [_fred_series(code, name=lbl) for lbl, code in SERIES_CPI_SERVICES.items()],
+        axis=1
+    ).dropna()
+
+    yoy = idx.pct_change(12) * 100
+    yoy.columns = [f"{c} YoY" for c in idx.columns]
+
+    ann3 = (idx / idx.shift(3)) ** 4 - 1
+    ann3 = ann3 * 100
+    ann3.columns = [f"{c} 3M" for c in idx.columns]
+
+    rec = _fred_series(RECESS, name="USREC")
+
+    return pd.concat([yoy, ann3, rec], axis=1).dropna()
+
 
 
 def _recession_periods(rec: pd.Series):
@@ -219,6 +246,76 @@ def render_cpi_housing() -> None:
         st.markdown(
             "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
             "Short Term Housing</div>",
+            unsafe_allow_html=True,
+        )
+        start_zoom = df_3m.index.max() - pd.DateOffset(months=48)
+
+        fig = go.Figure()
+        for series, col in zip(df_3m.columns, colours):
+            fig.add_scatter(
+                x=df_3m.index, y=df_3m[series],
+                mode="lines", name=series.replace(" 3M", ""),
+                line=dict(width=3, color=col)
+            )
+        _add_fed_ait_band(fig)
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25, r=10),
+            xaxis=dict(range=[start_zoom, df_3m.index.max()]),
+            yaxis=dict(
+                title="3-Month Rolling Annualised CPI",
+                tickformat=".1f", ticksuffix="%"
+            ),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+def render_cpi_services() -> None:
+    """
+    (L) YoY – Services vs ex-energy, ex-rent-of-shelter
+    (R) 3-month rolling annualised – same three series
+    """
+    df      = _panel_services()
+    recess  = _recession_periods(df["USREC"])
+
+    df_yoy = df[[f"{k} YoY" for k in SERIES_CPI_SERVICES.keys()]]
+    df_3m  = df[[f"{k} 3M"  for k in SERIES_CPI_SERVICES.keys()]]
+
+    col1, col2 = st.columns(2, gap="large")
+
+    colours = ["#86C7DE", "#0794C6", "#F4B400"]  # Services, ex-energy, ex-rent
+
+    # ---------- (1) YoY panel -------------------------------------------
+    with col1:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "Services Breakdown&nbsp;–&nbsp;YoY</div>",
+            unsafe_allow_html=True,
+        )
+        fig = go.Figure()
+        for series, col in zip(df_yoy.columns, colours):
+            fig.add_scatter(
+                x=df_yoy.index, y=df_yoy[series],
+                mode="lines", name=series.replace(" YoY", ""),
+                line=dict(width=3, color=col)
+            )
+        _add_fed_ait_band(fig)
+        fig.add_hline(y=0, line_width=1, line_dash="dash", line_color="#000")
+        _add_recessions(fig, recess)
+        fig.update_layout(
+            height=FIG_H, template="simple_white",
+            margin=dict(t=20, b=25, r=10),
+            yaxis=dict(title="YoY", tickformat=".1f", ticksuffix="%"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0.01)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # ---------- (2) 3-month annualised panel ----------------------------
+    with col2:
+        st.markdown(
+            "<div style='font-size:26px;font-weight:700;margin-left:75px;'>"
+            "Services Short&nbsp;term&nbsp;Breakdown</div>",
             unsafe_allow_html=True,
         )
         start_zoom = df_3m.index.max() - pd.DateOffset(months=48)
