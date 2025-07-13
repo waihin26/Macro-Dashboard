@@ -18,8 +18,5 @@ source .venv/bin/activate        # Windows: .\.venv\Scripts\activate
 # 3) Install dependencies
 pip install -r requirements.txt
 
-# 4) Add your FRED API key
-export FRED_API_KEY="YOUR_FRED_API_KEY"   # Windows (PowerShell): setx FRED_API_KEY "YOUR_FRED_API_KEY"
-
-# 5) Run the app
+# 4) Run the app
 streamlit run Home.py
